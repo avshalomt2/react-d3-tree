@@ -34,6 +34,7 @@ class Tree extends React.Component<TreeProps, TreeState> {
     translate: { x: 0, y: 0 },
     pathFunc: 'diagonal',
     pathClassFunc: undefined,
+    pathColorFunc: undefined,
     transitionDuration: 500,
     depthFactor: undefined,
     collapsible: true,
@@ -150,6 +151,7 @@ class Tree extends React.Component<TreeProps, TreeState> {
         .scaleExtent(zoomable ? [scaleExtent.min, scaleExtent.max] : [zoom, zoom])
         // TODO: break this out into a separate zoom handler fn, rather than inlining it.
         .on('zoom', () => {
+          if (!this.props.zoomable) return;
           g.attr('transform', event.transform);
           if (typeof onUpdate === 'function') {
             // This callback is magically called not only on "zoom", but on "drag", as well,
@@ -460,6 +462,8 @@ class Tree extends React.Component<TreeProps, TreeState> {
       enableLegacyTransitions,
       svgClassName,
       pathClassFunc,
+
+      pathColorFunc,
     } = this.props;
     const { translate, scale } = this.state.d3;
     const subscriptions = {
@@ -470,7 +474,7 @@ class Tree extends React.Component<TreeProps, TreeState> {
     };
 
     return (
-      <div className="rd3t-tree-container rd3t-grabbable">
+      <div className="rd3t-tree-container  rd3t-grabbable">
         <style>{globalCss}</style>
         <svg
           className={`rd3t-svg ${this.svgInstanceRef} ${svgClassName}`}
@@ -491,6 +495,7 @@ class Tree extends React.Component<TreeProps, TreeState> {
                   pathFunc={pathFunc}
                   pathClassFunc={pathClassFunc}
                   linkData={linkData}
+                  pathColorFunc={pathColorFunc}
                   onClick={this.handleOnLinkClickCb}
                   onMouseOver={this.handleOnLinkMouseOverCb}
                   onMouseOut={this.handleOnLinkMouseOutCb}

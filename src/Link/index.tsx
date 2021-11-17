@@ -9,6 +9,7 @@ import {
   PathFunction,
   TreeNodeDatum,
   PathClassFunction,
+  PathColorFunction,
 } from '../types/common';
 
 type LinkEventHandler = (
@@ -22,6 +23,7 @@ interface LinkProps {
   orientation: Orientation;
   pathFunc: PathFunctionOption | PathFunction;
   pathClassFunc?: PathClassFunction;
+  pathColorFunc?: PathColorFunction;
   enableLegacyTransitions: boolean;
   transitionDuration: number;
   onClick: LinkEventHandler;
@@ -32,6 +34,12 @@ interface LinkProps {
 type LinkState = {
   initialStyle: { opacity: number };
 };
+
+let _lastId = 0;
+function getId(): string {
+  _lastId++;
+  return 'tree_link_id_' + _lastId;
+}
 
 export default class Link extends React.PureComponent<LinkProps, LinkState> {
   private linkRef: SVGPathElement = null;
@@ -106,8 +114,8 @@ export default class Link extends React.PureComponent<LinkProps, LinkState> {
     const { linkData, orientation, pathFunc } = this.props;
 
     if (typeof pathFunc === 'function') {
-    const a =3
-    a;
+      const a = 3;
+      a;
       return pathFunc(linkData, orientation);
     }
     if (pathFunc === 'elbow') {
@@ -145,22 +153,72 @@ export default class Link extends React.PureComponent<LinkProps, LinkState> {
     this.props.onMouseOut(this.props.linkData.source, this.props.linkData.target, evt);
   };
 
+  getLinkColor(): string[] | string | undefined | null {
+    const { linkData, pathColorFunc, orientation } = this.props;
+
+    if (typeof pathColorFunc === 'function') {
+      return pathColorFunc(linkData, orientation);
+    }
+
+    return undefined;
+  }
+
+  getStrokeValue(linkColor, gradientId): string {
+    if (Array.isArray(linkColor)) {
+      return `url(#${gradientId})`;
+    } else {
+      return linkColor;
+    }
+  }
+
+  getGradientDef(gradientId, linkData, gradientStartColor, gradientEndColor) {
+    return (
+      <defs>
+        <linearGradient
+          id={gradientId}
+          y2={this.props.orientation === 'horizontal' ? '0%' : '100%'}
+          x2={this.props.orientation === 'horizontal' ? '100%' : '0%'}
+          gradientUnits={
+            linkData.source.x === linkData.target.x ? 'userSpaceOnUse' : 'objectBoundingBox'
+          }
+        >
+          <stop offset="0%" stopColor={gradientStartColor} stopOpacity={1} />
+          <stop offset="100%" stopColor={gradientEndColor} stopOpacity={1} />
+        </linearGradient>
+      </defs>
+    );
+  }
+
   render() {
     const { linkData } = this.props;
+    const gradientId = getId();
+    const linkColor = this.getLinkColor();
+    const pathStyle = { ...this.state.initialStyle };
+    const [gradientStartColor, gradientEndColor] = Array.isArray(linkColor)
+      ? linkColor
+      : [undefined, undefined];
+
+    if (gradientEndColor) {
+      pathStyle['stroke'] = this.getStrokeValue(linkColor, gradientId);
+    }
     return (
-      <path
-        ref={l => {
-          this.linkRef = l;
-        }}
-        style={{ ...this.state.initialStyle }}
-        className={this.getClassNames()}
-        d={this.drawPath()}
-        onClick={this.handleOnClick}
-        onMouseOver={this.handleOnMouseOver}
-        onMouseOut={this.handleOnMouseOut}
-        data-source-id={linkData.source.id}
-        data-target-id={linkData.target.id}
-      />
+      <>
+        <path
+          ref={l => {
+            this.linkRef = l;
+          }}
+          style={{ ...pathStyle }}
+          className={this.getClassNames()}
+          d={this.drawPath()}
+          onClick={this.handleOnClick}
+          onMouseOver={this.handleOnMouseOver}
+          onMouseOut={this.handleOnMouseOut}
+          data-source-id={linkData.source.id}
+          data-target-id={linkData.target.id}
+        />
+        {gradientStartColor &&
+          this.getGradientDef(gradientId, linkData, gradientStartColor, gradientEndColor)}
+      </>
     );
   }
 }
